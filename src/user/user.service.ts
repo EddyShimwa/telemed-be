@@ -15,6 +15,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import Logout from './entities/logout.entity';
 import { User } from './entities/user.entity';
 import Password from 'src/utils/password-hash';
+import { generateOtp } from 'src/utils/otp';
 
 @Injectable()
 export class UserService {
@@ -27,6 +28,66 @@ export class UserService {
     private readonly configService: ConfigService,
     private readonly paginateHelper: PaginatorHelper,
   ) {}
+
+  async generateAndSendOtp(email: string): Promise<string> {
+    const user = await this.findOneByEmail(email);
+
+    if (!user) {
+      throw new NotFoundException('User not found.');
+    }
+
+    const otp = generateOtp(6); // Generate a 6-digit OTP
+    const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000); // Set expiration to 10 minutes
+
+    user.otp = otp;
+    user.otpExpiresAt = otpExpiresAt;
+
+    await this.userRepository.save(user);
+
+    // Send OTP via email
+    try {
+      await this.commandBus.execute(
+        new SendEmailCommand(
+          user.email,
+          'Your OTP Code',
+          user.name,
+          `<p>Your OTP code is: <b>${otp}</b>. It is valid for 10 minutes.</p>`,
+          'Verify OTP',
+        ),
+      );
+    } catch (error) {
+      throw new BadRequestException(
+        `Failed to send OTP email: ${error.message}`,
+      );
+    }
+
+    return 'OTP sent successfully.';
+  }
+
+  // otp verification
+  async verifyOtp(email: string, otp: string): Promise<string> {
+    const user = await this.findOneByEmail(email);
+
+    if (!user) {
+      throw new NotFoundException('User not found.');
+    }
+
+    if (!user.otp || !user.otpExpiresAt || new Date() > user.otpExpiresAt) {
+      throw new BadRequestException('OTP is invalid or has expired.');
+    }
+
+    if (user.otp !== otp) {
+      throw new BadRequestException('Invalid OTP.');
+    }
+
+    // OTP is valid; clear it from the database
+    user.otp = null;
+    user.otpExpiresAt = null;
+    await this.userRepository.save(user);
+
+    return 'OTP verified successfully.';
+  }
+
   async create(createUserDto: CreateUserDto): Promise<string> {
     const { email, roleName } = createUserDto;
 

@@ -24,6 +24,12 @@ export class User {
   email: string;
 
   @Column({ nullable: true })
+  otp: string;
+
+  @Column({ nullable: true })
+  otpExpiresAt: Date;
+
+  @Column({ nullable: true })
   roleId: string;
 
   @Column()
