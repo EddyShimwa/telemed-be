@@ -64,7 +64,6 @@ export class UserService {
     return 'OTP sent successfully.';
   }
 
-  // otp verification
   async verifyOtp(email: string, otp: string): Promise<string> {
     const user = await this.findOneByEmail(email);
 
@@ -80,9 +79,10 @@ export class UserService {
       throw new BadRequestException('Invalid OTP.');
     }
 
-    // OTP is valid; clear it from the database
+    // OTP is valid; mark user as verified
     user.otp = null;
     user.otpExpiresAt = null;
+    user.isVerified = true; // Update verified status
     await this.userRepository.save(user);
 
     return 'OTP verified successfully.';
@@ -115,29 +115,15 @@ export class UserService {
     // Create the user
     const user = this.userRepository.create(createUserDto);
     user.role = role;
+    user.isVerified = false;
     user.registration_key = Math.random().toString(36).substring(2, 15);
 
     await this.userRepository.save(user);
 
     // Send verification email
-    try {
-      await this.commandBus.execute(
-        new SendEmailCommand(
-          user.email,
-          'Verify Your Email',
-          user.name,
-          `<p>You have been registered on our platform. To complete your registration, please verify your email.</p>`,
-          'Verify Email',
-          `${this.configService.get<string>('BACKEND_URL')}/api/users/${user.registration_key}/verify-email`,
-        ),
-      );
-    } catch (error) {
-      throw new BadRequestException(
-        `Failed to send verification email: ${error.message}`,
-      );
-    }
+    await this.generateAndSendOtp(email);
 
-    return 'Account created successfully. Kindly verify your email.';
+    return 'Account created successfully. Kindly verify your OTP to complete registration.';
   }
 
   async findAll(pageNumber: number, take?: number) {

@@ -95,8 +95,7 @@ export class EmailService {
                 ${buttonElement}
                 
                 <p style="margin: 0">
-                  <strong>Please note:</strong> Do not reply to this email. This
-                  email is sent from an unattended mailbox. Replies will not be read.
+                  <strong>Please note:</strong> Do not reply to this email. If you didn't request this code, you can safely ignore this message.
                 </p>
               </td>
             </tr>
@@ -106,7 +105,7 @@ export class EmailService {
                   Best Regards,
                 </p>
                 <p style="margin: 0; color: #333333; font-size: 12px">
-                  ${this.configService.get<string>('COMPANY_NAME')}
+                  ${this.configService.get<string>('COMPANY_NAME')} Team
                 </p>
               </td>
             </tr>
@@ -139,7 +138,7 @@ export class EmailService {
 
     try {
       await transport.sendMail(mailOptions);
-      console.log(`Emaiil successfully sent to ${to}`);
+      console.log(`Email successfully sent to ${to}`);
     } catch (error) {
       log(error);
     }

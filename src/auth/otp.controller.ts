@@ -23,7 +23,6 @@ export class OtpController {
     @Body() body: { email: string; otp: string },
   ): Promise<string> {
     const { email, otp } = body;
-
     if (!email || !otp) {
       throw new BadRequestException('Email and OTP are required.');
     }

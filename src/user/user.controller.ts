@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -60,6 +61,13 @@ export class UserController {
   @Post('login')
   async login(@Body() loginDto: LoginDto, @Req() req: Request) {
     const user = req.user as User;
+
+    if (!user.isVerified) {
+      throw new BadRequestException(
+        'Your email is not verified. Please verify the OTP sent to your email.',
+      );
+    }
+
     const result = await this.authService.login(user);
     return new APIResponse(
       HttpStatus.OK,
@@ -114,6 +122,17 @@ export class UserController {
         : 'User updated successfully.',
       updatedUser,
     );
+  }
+
+  @ApiOperation({ summary: 'Verify OTP after registration' })
+  @Post('verify-registration-otp')
+  async verifyRegistrationOtp(@Body() body: { email: string; otp: string }) {
+    const { email, otp } = body;
+
+    // Delegate OTP verification and user status update to UserService
+    const result = await this.userService.verifyOtp(email, otp);
+
+    return new APIResponse(HttpStatus.OK, result);
   }
 
   @ApiOperation({ summary: 'Admin can remove any user in the system.' })
