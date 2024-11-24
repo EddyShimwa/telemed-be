@@ -7,26 +7,26 @@ import { ConfigService } from '@nestjs/config';
 import { CommandBus } from '@nestjs/cqrs';
 import { InjectRepository } from '@nestjs/typeorm';
 import SendEmailCommand from 'src/email/commands/implementation/send-email.command';
-import Role from 'src/role/entities/role.entity';
+import { RoleService } from 'src/role/role.service';
+import { Permission } from 'src/role/entities/permission.entity';
+import { generateOtp } from 'src/utils/otp';
 import PaginatorHelper from 'src/utils/paginator-helper';
+import Password from 'src/utils/password-hash';
 import { Repository } from 'typeorm';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import Logout from './entities/logout.entity';
 import { User } from './entities/user.entity';
-import Password from 'src/utils/password-hash';
-import { generateOtp } from 'src/utils/otp';
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectRepository(User) private readonly userRepository: Repository<User>,
-    @InjectRepository(Role) private readonly roleRepository: Repository<Role>,
-    @InjectRepository(Logout)
-    private readonly logoutRepository: Repository<Logout>,
+    @InjectRepository(Permission)
+    private readonly permissionRepository: Repository<Permission>,
     private readonly commandBus: CommandBus,
     private readonly configService: ConfigService,
     private readonly paginateHelper: PaginatorHelper,
+    private readonly roleService: RoleService,
   ) {}
 
   async generateAndSendOtp(email: string): Promise<string> {
@@ -98,32 +98,51 @@ export class UserService {
     }
 
     // Validate and assign role
-    const validRoles = ['Admin', 'Provider', 'Patient'];
+    const validRoles = ['Admin', 'Provider', 'Patient', 'Developer'];
     if (!roleName || !validRoles.includes(roleName)) {
       throw new BadRequestException(
         `Invalid role. Allowed roles are: ${validRoles.join(', ')}`,
       );
     }
 
-    const role = await this.roleRepository.findOne({
-      where: { name: roleName },
-    });
+    const role = await this.roleService.findOneBy('name', roleName);
+
     if (!role) {
       throw new NotFoundException(`Role ${roleName} not found.`);
     }
 
     // Create the user
     const user = this.userRepository.create(createUserDto);
-    user.role = role;
-    user.isVerified = false;
+
     user.registration_key = Math.random().toString(36).substring(2, 15);
 
     await this.userRepository.save(user);
+
+    await this.assignRole(user.id, role.id);
 
     // Send verification email
     await this.generateAndSendOtp(email);
 
     return 'Account created successfully. Kindly verify your OTP to complete registration.';
+  }
+
+  async assignRole(user_id: string, role_id: string) {
+    const role = await this.roleService.findOne(role_id);
+    const user = await this.findOne(user_id);
+    const permission = this.permissionRepository.create({ role, user });
+    return this.permissionRepository.save(permission);
+  }
+
+  async removeRole(user_id: string, role_id: string) {
+    const permission = await this.permissionRepository.findOne({
+      where: { role: { id: role_id }, user: { id: user_id } },
+    });
+
+    if (!permission) {
+      throw new BadRequestException('Permission does not exist');
+    }
+
+    return this.permissionRepository.remove(permission);
   }
 
   async findAll(pageNumber: number, take?: number) {
@@ -132,20 +151,27 @@ export class UserService {
       'users',
       pageNumber,
       take,
-      ['id', 'name', 'email', 'isVerified', 'createdAt', 'role'], // fields
-      ['role'], // relations
+      ['id', 'name', 'email', 'isVerified', 'createdAt', 'roles'], // fields
+      ['roles'], // relations
     );
   }
 
   async findOneByEmail(email: string): Promise<User> {
-    return this.userRepository.findOne({
+    const user = await this.userRepository.findOne({
       where: { email },
-      relations: ['role'],
+      relations: ['roles'],
     });
+    console.log(user);
+    return user;
   }
 
-  findOne(id: string): Promise<User> {
-    return this.userRepository.findOne({ where: { id }, relations: ['role'] });
+  async findOne(id: string): Promise<User> {
+    const user = await this.userRepository.findOne({
+      where: { id },
+      relations: ['roles'],
+    });
+    if (!user) throw new NotFoundException('User not found.');
+    return user;
   }
 
   async verifyEmail(registration_key: string): Promise<string> {
@@ -165,8 +191,6 @@ export class UserService {
 
   async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
     const user = await this.findOne(id);
-
-    if (!user) throw new NotFoundException('User not found.');
 
     if ('password' in updateUserDto) {
       const password = Password.hash(updateUserDto.password);
@@ -198,18 +222,6 @@ export class UserService {
 
   async remove(id: string): Promise<User> {
     const user = await this.findOne(id);
-
-    if (!user) throw new NotFoundException('User not found.');
-
     return this.userRepository.remove(user);
-  }
-
-  async logout(token: string): Promise<Logout> {
-    const logoutToken = this.logoutRepository.create({ token });
-    return this.logoutRepository.save(logoutToken);
-  }
-
-  async findToken(token: string): Promise<Logout> {
-    return await this.logoutRepository.findOne({ where: { token } });
   }
 }

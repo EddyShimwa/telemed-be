@@ -4,7 +4,7 @@ import Role from 'src/role/entities/role.entity';
 export const seedRoles = async (dataSource: DataSource) => {
   const roleRepository = dataSource.getRepository(Role);
 
-  const roles = ['Admin', 'Provider', 'Patient'];
+  const roles = ['Admin', 'Provider', 'Patient', 'Developer'];
 
   for (const roleName of roles) {
     const roleExists = await roleRepository.findOne({

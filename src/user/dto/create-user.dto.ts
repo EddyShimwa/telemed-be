@@ -42,8 +42,9 @@ export class CreateUserDto {
   })
   @IsString()
   @IsNotEmpty()
-  @Matches(/^(Admin|Provider|Patient)$/i, {
-    message: 'Role must be one of the following: Admin, Provider, Patient',
+  @Matches(/^(Admin|Provider|Patient|Developer)$/i, {
+    message:
+      'Role must be one of the following: Admin, Provider, Patient, Developer',
   })
   roleName: string;
 }

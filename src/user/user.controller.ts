@@ -18,9 +18,7 @@ import { Request } from 'express';
 import { AuthService } from 'src/auth/auth.service';
 import LocalAuthGuard from 'src/auth/local-auth.guard';
 import { ApiResponseDecorator } from 'src/common/decorators/apiResponse.decorator';
-import { Auth } from 'src/common/decorators/auth.decorator';
 import { ValidUUID } from 'src/common/instances/uuid-validation.instance';
-import ExtendedRequest from 'src/common/interfaces/ExtendedRequest';
 import APIResponse from 'src/utils/response';
 import { CreateUserDto } from './dto/create-user.dto';
 import { LoginDto } from './dto/login.dto';
@@ -80,21 +78,9 @@ export class UserController {
     );
   }
 
-  @ApiOperation({
-    summary: 'Each user has ability to logout in case he/she left the platform',
-  })
-  @ApiResponseDecorator()
-  @Get('logout')
-  @Auth('USER', 'ADMIN')
-  async logout(@Req() req: ExtendedRequest) {
-    await this.userService.logout(req.token);
-    return new APIResponse(HttpStatus.OK, 'User logged out successfully.');
-  }
-
   @ApiOperation({ summary: 'Admin can get all users.' })
   @ApiResponseDecorator()
   @Get()
-  @Auth('ADMIN')
   async findAll(
     @Query('pageNumber') pageNumber: number,
     @Query('take') take?: number,
@@ -106,7 +92,6 @@ export class UserController {
   @ApiOperation({ summary: 'Admin can update his account information.' })
   @ApiResponseDecorator()
   @Patch()
-  @Auth('ADMIN')
   async update(@Req() req: Request, @Body() updateUserDto: UpdateUserDto) {
     const { id } = req['user'] as User;
     const updatedUser = await this.userService.update(id, updateUserDto);
@@ -138,7 +123,6 @@ export class UserController {
   @ApiOperation({ summary: 'Admin can remove any user in the system.' })
   @ApiResponseDecorator()
   @Delete(':id')
-  @Auth('ADMIN')
   async remove(@Param('id', ValidUUID) id: string) {
     const deletedUser = await this.userService.remove(id);
 
