@@ -5,7 +5,6 @@ import {
   FindOptionsSelect,
   FindOptionsSelectByString,
   FindOptionsWhere,
-  ILike,
   Repository,
 } from 'typeorm';
 
@@ -21,18 +20,11 @@ export default class PaginatorHelper {
     take?: number,
     select?: FindOptionsSelect<T> | FindOptionsSelectByString<T>,
     relations?: FindOptionsRelations<T> | FindOptionsRelationByString,
-    searchField?: keyof T,
-    searchValue?: string | number,
+    where?: FindOptionsWhere<T> | FindOptionsWhere<T>[],
   ) {
-    //  where condition for search
-    const whereCondition: FindOptionsWhere<T> | FindOptionsWhere<T>[] =
-      searchField && searchValue
-        ? ({ [searchField]: ILike(`%${searchValue}%`) } as FindOptionsWhere<T>)
-        : {};
-
     const [data, total] = await repository.findAndCount({
       select,
-      where: whereCondition,
+      where,
       take: take || 10,
       skip: (pageNumber - 1) * (take || 10),
       relations,

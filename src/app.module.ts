@@ -9,7 +9,9 @@ import DatabaseService from './database/database.service';
 import { EmailModule } from './email/email.module';
 import { EmailService } from './email/email.service';
 import { RoleModule } from './role/role.module';
+import { SecurableModule } from './securable/securable.module';
 import { UserModule } from './user/user.module';
+import { MenusModule } from './menus/menus.module';
 
 @Module({
   imports: [
@@ -21,6 +23,8 @@ import { UserModule } from './user/user.module';
     RoleModule,
     EmailModule,
     AuthModule,
+    SecurableModule,
+    MenusModule,
   ],
   controllers: [AppController],
   providers: [AppService, EmailService, CloudinaryService],

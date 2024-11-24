@@ -6,8 +6,8 @@ import {
   Column,
   CreateDateColumn,
   Entity,
-  JoinColumn,
-  ManyToOne,
+  JoinTable,
+  ManyToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -29,18 +29,19 @@ export class User {
   @Column({ nullable: true })
   otpExpiresAt: Date;
 
-  @Column({ nullable: true })
-  roleId: string;
-
   @Column()
   registration_key: string;
 
   @Column({ default: false })
   isVerified: boolean;
 
-  @ManyToOne(() => Role, (role) => role.users)
-  @JoinColumn({ name: 'roleId' })
-  role: Role;
+  @ManyToMany(() => Role, (role) => role.users)
+  @JoinTable({
+    name: 'permissions',
+    joinColumn: { name: 'user_id', referencedColumnName: 'id' },
+    inverseJoinColumn: { name: 'role_id', referencedColumnName: 'id' },
+  })
+  roles: Role[];
 
   @Column({ type: 'text' })
   @Exclude()

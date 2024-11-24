@@ -1,0 +1,9 @@
+Notes about routes: (Please create this securables and assign them to differents menus or submenu)
+
+1. /dashboard/roles -> Securable with this route give access to Admin and Developer to access roles
+2. /dashboard/menus -> Securable with this route give access Developer to get extra access to menus
+3. /dashboard/settings/securables -> Give access to Admin and Developer to access securables
+4. /dashboard/settings/recent-deleted (parentmenu) -> Give access to Developer to access menu for all deleted data
+5. /dashboard/settings/recent-deleted/menus (submenu) -> Give access to Developer to access deleted menus
+6. /dashboard/settings/recent-deleted/securables (submenu) -> Give access to Developer to access deleted securables
+7. /dashboard/settings/recent-deleted/roles (submenu) -> Give access to Developer to access deleted roles
