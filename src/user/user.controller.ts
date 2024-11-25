@@ -13,7 +13,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Request } from 'express';
 import { AuthService } from 'src/auth/auth.service';
 import LocalAuthGuard from 'src/auth/local-auth.guard';
@@ -110,6 +110,16 @@ export class UserController {
   }
 
   @ApiOperation({ summary: 'Verify OTP after registration' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        email: { type: 'string', example: 'user@example.com' },
+        otp: { type: 'string', example: '123456' },
+      },
+      required: ['email', 'otp'],
+    },
+  })
   @Post('verify-registration-otp')
   async verifyRegistrationOtp(@Body() body: { email: string; otp: string }) {
     const { email, otp } = body;

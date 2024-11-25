@@ -1,4 +1,10 @@
-import { IsEmail, IsNotEmpty, IsString, Matches } from 'class-validator';
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsString,
+  IsUUID,
+  Matches,
+} from 'class-validator';
 import MatchValue from './password-request-checks';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -37,14 +43,10 @@ export class CreateUserDto {
   confirmPassword: string;
 
   @ApiProperty({
-    description: 'Role of the user (Admin, Provider, Patient)',
-    example: 'Admin',
+    description: 'Role ID of the user',
+    example: 'c4c02b36-47fc-42f8-8121-91de74b28aa3',
   })
-  @IsString()
+  @IsUUID()
   @IsNotEmpty()
-  @Matches(/^(Admin|Provider|Patient|Developer)$/i, {
-    message:
-      'Role must be one of the following: Admin, Provider, Patient, Developer',
-  })
-  roleName: string;
+  roleId: string;
 }

@@ -16,11 +16,13 @@ import { Repository } from 'typeorm';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { User } from './entities/user.entity';
+import Role from 'src/role/entities/role.entity';
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectRepository(User) private readonly userRepository: Repository<User>,
+    @InjectRepository(Role) private readonly roleRepository: Repository<Role>,
     @InjectRepository(Permission)
     private readonly permissionRepository: Repository<Permission>,
     private readonly commandBus: CommandBus,
@@ -36,7 +38,7 @@ export class UserService {
       throw new NotFoundException('User not found.');
     }
 
-    const otp = generateOtp(6); // Generate a 6-digit OTP
+    const otp = generateOtp(6);
     const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000); // Set expiration to 10 minutes
 
     user.otp = otp;
@@ -60,7 +62,6 @@ export class UserService {
         `Failed to send OTP email: ${error.message}`,
       );
     }
-
     return 'OTP sent successfully.';
   }
 
@@ -82,45 +83,48 @@ export class UserService {
     // OTP is valid; mark user as verified
     user.otp = null;
     user.otpExpiresAt = null;
-    user.isVerified = true; // Update verified status
+    user.isVerified = true;
     await this.userRepository.save(user);
 
     return 'OTP verified successfully.';
   }
 
   async create(createUserDto: CreateUserDto): Promise<string> {
-    const { email, roleName } = createUserDto;
+    const { email, roleId, name, password, confirmPassword } = createUserDto;
 
-    // when the email already exists
+    // Check if the email already exists
     const userByEmail = await this.findOneByEmail(email);
     if (userByEmail) {
       throw new BadRequestException(`User with email ${email} already exists!`);
     }
 
-    // Validate and assign role
-    const validRoles = ['Admin', 'Provider', 'Patient', 'Developer'];
-    if (!roleName || !validRoles.includes(roleName)) {
-      throw new BadRequestException(
-        `Invalid role. Allowed roles are: ${validRoles.join(', ')}`,
-      );
+    // Validate and fetch the role by roleId
+    if (!roleId) {
+      throw new BadRequestException('Role ID is required.');
     }
 
-    const role = await this.roleService.findOneBy('name', roleName);
+    const role = await this.roleRepository.findOne({
+      where: { id: roleId, isDeleted: false },
+    });
 
     if (!role) {
-      throw new NotFoundException(`Role ${roleName} not found.`);
+      throw new NotFoundException(`Role with ID ${roleId} not found.`);
     }
 
-    // Create the user
-    const user = this.userRepository.create(createUserDto);
+    // Create the user and assign the role
+    const user = this.userRepository.create({
+      email, // Explicitly set the email
+      name,
+      password,
+      confirmPassword,
+      roles: [role], // Assign the fetched role to the user's roles array
+    });
 
     user.registration_key = Math.random().toString(36).substring(2, 15);
 
+    // Save the user with the associated role
     await this.userRepository.save(user);
 
-    await this.assignRole(user.id, role.id);
-
-    // Send verification email
     await this.generateAndSendOtp(email);
 
     return 'Account created successfully. Kindly verify your OTP to complete registration.';
